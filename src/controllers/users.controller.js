@@ -1,8 +1,15 @@
 import User from "../models/users.models.js"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
+import "dotenv/config"
 
-
+cloudinary.config({ 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET, // Click 'View API Keys' above to copy your API secret
+});
 
 
 const generateAccessToken = (user) => {
@@ -18,7 +25,8 @@ const generateAccessToken = (user) => {
     });
   };
   
- 
+//  register User
+
  const registerUser = async (req ,res) => {
    const { email,password  } =req.body;
    try{
@@ -106,5 +114,50 @@ res.json({ decodedToken });
 
 }
 
+// image server se araha h or server se image delete horha h fs ki help se
 
- export {registerUser,loginUser,logoutUser,refreshToken}
+const uploadImageToCloudinary  = async (localpath)=>{
+    try {const uploadResult = await cloudinary.uploader
+       .upload(
+        localpath, {
+          resource_type: "auto",}
+       )
+       fs.unlinkSync(localpath);
+    return uploadResult.url;
+      }
+       catch(error) {
+           console.log(error);
+       };
+    console.log(uploadResult);
+}
+  
+// image ka url cloudinary se arha h
+
+const uploadImage = async(req,res)=>{
+  if (!req.file)
+    return res.status(400).json({
+      message: "no image file uploaded",
+    });
+
+    try {
+      const uploadResult = await uploadImageToCloudinary(req.file.path);
+      console.log(uploadResult);
+      
+      if(!uploadResult)
+        res.json({
+      messege : "err accurd while uploading"
+      })
+
+      res.json({
+        message: "image uploaded successfully",
+        url: uploadResult,
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        message : "err accured while uploading image"
+      })
+    }
+}
+
+ export {registerUser,loginUser,logoutUser,refreshToken,uploadImage}
